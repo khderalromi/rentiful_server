@@ -65,46 +65,31 @@ const PropertySchema = new mongoose.Schema(
     Averageratings: {
       type: Number,
       default: 4.5,
-      set: (val:number) => Math.round(val * 10) / 10, // تقريب الرقم (مثل 4.666 إلى 4.7)
+      set: (val: number) => Math.round(val * 10) / 10,
     },
     numberOfReviews: {
       type: Number,
       default: 0,
     },
     locationId: {
-        type: mongoose.Schema.ObjectId, // نوع البيانات هو المعرف الفريد الخاص بـ MongoDB
-        ref: 'Location', // "السلك" موصل بموديل اسمه Clinic
-        required: [true, 'كل عقار يجب أن يكون له موقع'] // هذا الحقل إجباري مع رسالة خطأ مخصصة
+      type: mongoose.Schema.ObjectId,
+      ref: "Location",
+      required: [true, "كل عقار يجب أن يكون له موقع"],
     },
     manager: {
-        type: mongoose.Schema.ObjectId, // نوع البيانات هو المعرف الفريد الخاص بـ MongoDB
-        ref: 'User', // "السلك" موصل بموديل اسمه Clinic
-        required: [true, 'كل عقار يجب أن يكون له مالك'] // هذا الحقل إجباري مع رسالة خطأ مخصصة
+      type: mongoose.Schema.ObjectId,
+      ref: "User",
+      required: [true, "كل عقار يجب أن يكون له مالك"],
     },
     reviews: {
-        type: mongoose.Schema.ObjectId, // نوع البيانات هو المعرف الفريد الخاص بـ MongoDB
-        ref: 'Review', // "السلك" موصل بموديل اسمه Clinic
-        
+      type: mongoose.Schema.ObjectId,
+      ref: "Review",
     },
   },
   {
-    timestamps: true, // لتسجيل وقت الإنشاء والتحديث تلقائياً
+    timestamps: true,
   },
 );
-/*
-PropertySchema.pre(/^find/, function(this:any) {
-  this.populate({
-    path: 'manager',
-    select: 'name'
-  }).populate({
-    path: 'locationId',
-    select: 'city state postalCode coordinates'
-  }).populate({
-    path: 'reviews',
-    select: 'reviews'
-  });
-});
-*/
 
 const Property = mongoose.model("Property", PropertySchema);
 export default Property;

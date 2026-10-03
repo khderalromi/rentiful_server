@@ -5,6 +5,7 @@ import AppError from '../utils/appError.js';
 import { promisify } from 'util';
 import crypto from 'crypto'; // مدمجة في Node.js لا تحتاج لتنصيب
 import sendEmail from '../utils/email.js';
+import Tenant from '../models/Tenant.model.js';
 
 
 
@@ -17,7 +18,9 @@ const signToken = (id:string) => {
 
 
 export const signup = catchAsync(async (req:any, res:any, next:any) => {
-    
+  const checkEmail= await User.findOne({ email: req.body.email });
+
+  if(checkEmail) {return next (new AppError("This Email is already used ",400))}
   // لاحظ أننا نحدد الحقول التي نقبلها لزيادة الأمان
   const newUser = await User.create({
     name: req.body.name,
@@ -25,7 +28,6 @@ export const signup = catchAsync(async (req:any, res:any, next:any) => {
     password: req.body.password,
     passwordConfirm: req.body.passwordConfirm,
     phoneNumber:req.body.phoneNumber,
-    cognitoId:req.body.cognitoId,
     role: req.body.role // سنقوم بحماية هذا لاحقاً لمنع أي شخص من جعل نفسه Admin
   });
   const token = signToken((newUser._id as any).toString());
@@ -64,11 +66,27 @@ export const login = catchAsync(async (req:any, res:any, next:any) => {
 
   res.status(200).json({
     status: 'success',
-    token
+    token,
+    user: {
+    name: user.name,
+    email: user.email,
+    _id: user._id
+  }
   });
 });
 
-
+//لأقوم بأخذ بيانات المستخدم وحفظها والتعامل معها بالفرونت
+export const getMe = catchAsync(async (req:any, res:any) => {
+  let userProfile = null
+  if (req.user.role == "Tenant") {
+    userProfile = await Tenant.findOne({tenant : req.user._id}).populate("favourites")
+    console.log(userProfile)
+  }
+  res.status(200).json({ status: 'success', data: {
+      user: req.user,       
+      userInfo: userProfile
+    } });
+})
 
 export const protect = catchAsync(async (req: any, res:any, next:any) => {
   let token;
@@ -134,7 +152,7 @@ export const updateMe = catchAsync(async (req:any, res:any, next:any) => {
 
   // 2) فلترة الـ body لمنع تغيير الحقول الحساسة مثل الـ role
   // سنسمح فقط بتغيير الاسم (name) والإيميل (email)
-  const filteredBody = filterObj(req.body, 'name', 'email');
+  const filteredBody = filterObj(req.body, 'name', 'email','phoneNumber');
 
   // 3) تحديث وثيقة المستخدم في قاعدة البيانات ببيانات الفلترة
   // الـ options: runValidators لضمان التحقق من صحة الإيميل الجديد، و new لإعادة البيانات الجديدة

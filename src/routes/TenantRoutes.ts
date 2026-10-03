@@ -2,10 +2,8 @@ import express from 'express';
 const router = express.Router({mergeParams: true});
 
 import * as authController from './../controllers/AuthController.js';
-
 import * as tenantController from './../controllers/TenantController.js';
 
-import * as reviewsController from './../controllers/ReviewsController.js';
 
 import ApplicationRoutes from "./ApplicationRoutes.js";
 router.use("/applications", ApplicationRoutes);
@@ -13,7 +11,6 @@ router.use("/applications", ApplicationRoutes);
 
 router.use(authController.protect);
 
-// 2. المسارات العامة للبحث والإضافة
 router
   .route('/addFav/:propertyId')
   .post(authController.restrictTo('Tenant'), tenantController.addToFavourite);

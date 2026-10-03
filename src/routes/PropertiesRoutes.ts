@@ -6,44 +6,35 @@ import * as authController from "../controllers/AuthController.js"; // استد�
 
 router.use(authController.protect);
 
-//nested  routes
 import reviewRouter from "./ReviewsRoutes.js";
 router.use("/:propertyId/reviews", reviewRouter);
 
 import ApplicationRoutes from "./ApplicationRoutes.js";
 router.use("/:propertyId/applications", ApplicationRoutes);
 
-
 import LeasesRoutes from "./LeaseRoutes.js";
 router.use("/:propertyId", LeasesRoutes);
 
-
-// 2. المسارات العامة للبحث والإضافة
 router
   .route("/create")
-  //.get(propertyController.findClinicfilter)
   .post(
     authController.restrictTo("Manager"),
     propertyController.createProperty,
   );
 
-// 3. المسارات التي تعتمد على ID
 router
   .route("/update/:id")
   .patch(
     authController.restrictTo("Manager"),
     propertyController.updateProperty,
   );
-//.delete(propertyController.deleteClinic);
 
-// 3. المسارات التي تعتمد على ID
 router
   .route("/filter")
   .get(
-    authController.restrictTo("Manager"),
+    authController.restrictTo("Tenant" , "Manager"),
     propertyController.findPropertyfilter,
   );
-//.delete(propertyController.deleteClinic);
 
 router
   .route("/delete/:id")
@@ -59,22 +50,12 @@ router
     propertyController.getAllProperties,
   );
 
-  
 router
   .route("/property/:id")
-  .get(
-    authController.restrictTo("Manager"),
-    propertyController.getProperty,
-  );
-
-
-  // تأكد من استدعاء الدالة من الكنترولر
-// router.use(authController.protect); (إذا أردت حمايته)
+  .get(authController.restrictTo("Tenant", "Manager"), propertyController.getProperty);
 
 router
-  .route('/nearBy/:distance/:latlng/:unit')
+  .route("/nearBy/:distance/:latlng/:unit")
   .get(propertyController.getPropertiesWithinRadius);
 
-
-  
 export default router;

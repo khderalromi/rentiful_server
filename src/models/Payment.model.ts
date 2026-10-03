@@ -5,35 +5,35 @@ const paymentSchema = new mongoose.Schema(
   {
     amountDue: {
       type: Number,
-      required:true,
+      required: true,
     },
     amountPaid: {
       type: Number,
-      required:true,
+      required: true,
     },
     dueDate: {
       type: Date,
-      required:true,
+      required: true,
     },
     paymentDate: {
       type: Date,
-      required:true,
+      required: true,
     },
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "PartiallyPaid", "Overdue"],
       default: "Pending",
-      required:true,
+      required: true,
     },
     lease: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Lease",
-        required: true,
-    }
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lease",
+      required: true,
+    },
   },
   {
-    timestamps: true, // يضيف حقول createdAt و updatedAt تلقائياً
-  }
+    timestamps: true,
+  },
 );
 
 const Payment = mongoose.model("Payment", paymentSchema);

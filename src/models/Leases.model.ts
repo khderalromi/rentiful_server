@@ -1,6 +1,4 @@
 import mongoose from "mongoose";
-import Property from "./Property.model.js";
-import AppError from "../utils/appError.js";
 const leasesSchema = new mongoose.Schema(
   {
     startDate: {
@@ -31,19 +29,9 @@ const leasesSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // يضيف حقول createdAt و updatedAt تلقائياً
+    timestamps: true,
   },
 );
-/*
-leasesSchema.pre(/^find/, function (this: any) {
-  this.populate({
-    path: "tenant",
-    select: "name email phoneNumber congitoId _id ", // نحن لا نحتاج إلى جميع حقول الطبيب، فقط اسمه
-  }).populate({
-    path: "property",
-    select: "name description pricePerMonth _id  ", // نحن لا نحتاج إلى جميع حقول العقار، فقط بعضها
-  })
-});
-*/
+
 const Lease = mongoose.model("Lease", leasesSchema);
 export default Lease;

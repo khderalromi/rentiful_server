@@ -153,7 +153,7 @@ export const findPropertyfilter = async (req: any, res: any) => {
   try {
     // 1. عزل شروط البحث عن أوامر التحكم (sort, limit...)
     let queryObj = { ...req.query };
-    const excludeFields = ["sort", "page", "limit", "fields"];
+    const excludeFields = ["sort", "page", "limit", "fields", "locationId", "latlng", "distance", "unit", "city", "location"];
     excludeFields.forEach((el) => delete queryObj[el]);
 
     // 2. معالجة العمليات الحسابية (gt, gte...) وتحويلها لصيغة MongoDB
@@ -178,7 +178,35 @@ export const findPropertyfilter = async (req: any, res: any) => {
         delete finalQuery[key];
       }
     });
+    // أولوية 1: البحث الجغرافي الدقيق (إذا أرسل الفرونت إند إحداثيات من Mapbox)
+let locationIds : string[] = [];
+if (req.query.latlng && req.query.distance) {
+  const [lat, lng] = req.query.latlng.split(",");
+  const radius = req.query.unit === "mi" ? Number(req.query.distance) / 3963.2 : Number(req.query.distance) / 6378.1;
+  
+  const nearbyLocations = await Location.find({
+    location: { $geoWithin: { $centerSphere: [[Number(lng), Number(lat)], radius] } }
+  });
+  
+  locationIds = nearbyLocations.map((loc: any) => loc._id.toString());
+  finalQuery.locationId = { $in: locationIds };
+} 
+// أولوية 2: البحث النصي العادي (في حال لم تُستخدم الخريطة وأرسل المستخدم اسم مدينة فقط)
+else if (req.query.city || req.query.location) {
+  const cityName = req.query.city || req.query.location;
+  if (cityName !== "any" && cityName.trim() !== "") {
+    const matchingLocations = await Location.find({
+      city: { $regex: new RegExp(cityName, "i") } // بحث غير حساس لحالة الأحرف
+    });
+    
+    locationIds = matchingLocations.map((loc: any) => loc._id.toString());
+    finalQuery.locationId = { $in: locationIds };
+  }
+}
 
+// تنظيف الكائن النهائي من أي بقايا للبحث النصي لكي لا تخرب استعلام العقارات
+delete finalQuery.city;
+delete finalQuery.location;
     // 4. بناء الاستعلام (هنا تبدأ عملية الـ Chaining)
     let propertyQuery: any = Property.find(finalQuery);
 
@@ -212,7 +240,7 @@ export const findPropertyfilter = async (req: any, res: any) => {
       })
       .populate({
         path: "locationId",
-        select: "city state postalCode coordinates",
+        select: "city state postalCode location",
       })
       .populate({
         path: "reviews",
@@ -230,12 +258,9 @@ export const findPropertyfilter = async (req: any, res: any) => {
   }
 };
 
-//تطبيق populate
+
 export const getProperty = async (req: any, res: any) => {
-  // جلب المشروع و "ملء" بيانات المهندس تلقائياً
-  // "doctors" هو اسم الحقل الذي يشير إلى الـ ObjectId في الـ Schema
-  //const clinic = await Clinic.findById(:any.params.id).populate({path: 'team',select: 'name specialist budget '});
-  if (req.file) req.body.photo = req.file.filename;
+
   const property = await Property.findById(req.params.id)
     .populate({
       path: "manager",
@@ -243,7 +268,7 @@ export const getProperty = async (req: any, res: any) => {
     })
     .populate({
       path: "locationId",
-      select: "city state postalCode coordinates",
+      select: "city state postalCode location",
     })
     .populate({
       path: "reviews",
@@ -251,7 +276,7 @@ export const getProperty = async (req: any, res: any) => {
     });
 
   console.log(property);
-  res.status(200).json({ status: "success", data: { property } });
+  res.status(200).json({ status: "success", data: property });
 };
 
 export const getAllProperties = async (req: any, res: any) => {
