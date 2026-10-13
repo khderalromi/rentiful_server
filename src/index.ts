@@ -52,6 +52,10 @@ import leasesRoutes from './routes/LeaseRoutes.js';
 app.use('/leases', leasesRoutes);
 
 
+import paymentsRoutes from './routes/PaymentRoutes.js';
+app.use('/payments', paymentsRoutes);
+
+
 /*SERVER*/
 const port =process.env.PORT || 3002;
 app.use((err: { statusCode: number; status: string; message: any; stack: any; },

@@ -19,6 +19,8 @@ router
   .route("/create")
   .post(
     authController.restrictTo("Manager"),
+    propertyController.uploadPropertyrPhoto,
+    propertyController.resizePropertyPhoto,
     propertyController.createProperty,
   );
 
@@ -53,6 +55,10 @@ router
 router
   .route("/property/:id")
   .get(authController.restrictTo("Tenant", "Manager"), propertyController.getProperty);
+
+router
+  .route("/manager_properties")
+  .get(authController.restrictTo("Manager"), propertyController.getManagerProperties);
 
 router
   .route("/nearBy/:distance/:latlng/:unit")

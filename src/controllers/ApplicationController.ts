@@ -5,6 +5,14 @@ const Application =
   (ApplicationModule as any).Application ??
   ApplicationModule;
 
+import * as LeaseModule from "../models/Leases.model.js";
+import AppError from "../utils/appError.js";
+
+const Leases =
+  (LeaseModule as any).default ??
+  (LeaseModule as any).Leases ??
+  LeaseModule;
+
 export const createApplication = async (req: any, res: any) => {
   // إذا لم يرسل المستخدم projectId في الـ body، نأخذه من الرابط
   try {
@@ -67,9 +75,22 @@ export const getPropertyApplications = async (req: any, res: any) => {
   }
 };
 
-export const changeStatus = async (req: any, res: any) => {
+export const changeStatus = async (req: any, res: any , next:any) => {
   try {
-    // مثال لتحديث حقل الصورة في الدالة
+ const application = await Application.findById(req.params.applicationId);
+    if (!application) {
+      return res.status(404).json({ message: "الطلب غير موجود" });
+    }
+    if (req.body.status === "approved") {
+      const existingActiveLease = await Leases.findOne({
+        property: application.property,
+        endDate: { $gte: new Date() },
+      });
+      if (existingActiveLease) {
+        return next(
+          new AppError("this property have an active lease", 400)
+        );
+      }
     const newApplication = await Application.findByIdAndUpdate(
       { _id: req.params.applicationId },
       { status: req.body.status },
@@ -89,12 +110,12 @@ export const changeStatus = async (req: any, res: any) => {
       status: "success",
       data: { newApplication },
     });
+  }
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
-};
 
-
+}
 
 // 3. إلغاء الحجز (تغيير الحالة وليس الحذف)
 export const cancelApplication = async (req:any, res:any) => {

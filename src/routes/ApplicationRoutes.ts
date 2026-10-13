@@ -4,10 +4,10 @@ const router = express.Router({ mergeParams: true });
 import * as authController from "./../controllers/AuthController.js";
 import * as ApplicationController from "./../controllers/ApplicationController.js";
 
+router.use(authController.protect);
 import leaseRoutes from "./LeaseRoutes.js";
 router.use("/:applicationId/leases", leaseRoutes);
 
-router.use(authController.protect);
 
 router
   .route("/create")

@@ -60,7 +60,7 @@ const PropertySchema = new mongoose.Schema(
     },
     postedDate: {
       type: Date,
-      required: [true, "يرجى إدخال تاريخ النشر"],
+      dafault: new Date()
     },
     Averageratings: {
       type: Number,

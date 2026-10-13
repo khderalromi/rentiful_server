@@ -38,24 +38,25 @@ const upload = multer({
 });
 
 // متاح للاستخدام في ملف المسارات (حقل واحد باسم photo)
-export const uploadPropertyrPhoto = upload.single("photo");
+export const uploadPropertyrPhoto = upload.array("photos", 10);;
 
 export const resizePropertyPhoto = async (req: any, res: any, next: any) => {
   try {
     // إذا لم يقم المستخدم برفع صورة جديدة، ننتقل للدالة التالية فوراً
-    if (!req.file) return next();
+    if (!req.files || req.files.length === 0) return next();
+    req.body.photoUrls = [];
 
     // بناء اسم فريد للصورة لعدم تكرار الأسماء (مثال: doctor-6a0080-168482.jpeg)
-    req.file.filename = `property-${req.user ? req.user.id : "admin"}-${Date.now()}.jpeg`;
+   for (const file of req.files) {
+      const filename = `property-${req.user ? req.user.id : "admin"}-${Date.now()}-${Math.round(Math.random() * 1000)}.jpeg`;
 
-    // 💡 السحر البرمجي باستخدام مكتبة Sharp:
-    await sharp(req.file.buffer)
-      .resize(500, 500) // تغيير الحجم لأبعاد مربعة مثالية للبروفايل
-      .toFormat("jpeg") // توحيد الصيغة لـ jpeg لتقليل الحجم
-      .jpeg({ quality: 90 }) // ضغط الجودة لـ 90% (توفر 70% من المساحة بنفس النقاء)
-      .toFile(`public/img/property/${req.file.filename}`); // الحفظ النهائي في مجلد المشروع
-
+      await sharp(file.buffer)
+        .resize(800, 800)
+        .toFormat("jpeg")
+        .jpeg({ quality: 90 })
+        .toFile(`public/img/property/${filename}`);
     next();
+   }
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }
@@ -78,7 +79,22 @@ export const deleteProperty = async (req: any, res: any) => {
 
 export const createProperty = async (req: any, res: any) => {
   try {
+    const parseField = (field: any) => {
+      if (typeof field === "string") {
+        try {
+          console.log(field)
+          return JSON.parse(field); // محاولة فكها إذا كانت JSON صحيح
+        } catch (e) {
+          return [field]; // إذا كانت نصاً عادياً، ضعها داخل مصفوفة تلقائياً لتجنب الخطأ
+        }
+      }
+      return field;
+    };
+    req.body.coordinates = parseField(req.body.coordinates);
+    //req.body.amenities = parseField(req.body.amenities);
+    //req.body.highLights = parseField(req.body.highLights);
     // 2. إذا لم يكن موجوداً، نقوم بإنشائه تلقائياً في الخلفية
+    console.log(req.body.coordinates)
     const createdLocation: any = await Location.create({
       address: req.body.address,
       city: req.body.city,
@@ -90,7 +106,7 @@ export const createProperty = async (req: any, res: any) => {
         coordinates: req.body.coordinates,
       },
     });
-    if(!req.body.manager) req.body.manager = req.user.id;
+    if(!req.body.manager) req.body.manager = req.user._id;
     const newProperty = await Property.create({
       ...req.body,
       locationId: createdLocation?._id,
@@ -259,6 +275,7 @@ delete finalQuery.location;
 };
 
 
+//get property by id
 export const getProperty = async (req: any, res: any) => {
 
   const property = await Property.findById(req.params.id)
@@ -279,6 +296,29 @@ export const getProperty = async (req: any, res: any) => {
   res.status(200).json({ status: "success", data: property });
 };
 
+
+//Mnaager properties
+export const getManagerProperties = async (req: any, res: any) => {
+
+  const property = await Property.find({manager:req.user._id})
+    .populate({
+      path: "manager",
+      
+    })
+    .populate({
+      path: "locationId",
+      
+    })
+    .populate({
+      path: "reviews",
+      select: "reviews",
+    });
+
+  console.log(property);
+  res.status(200).json({ status: "success", data: property });
+};
+
+//All properties
 export const getAllProperties = async (req: any, res: any) => {
   try {
     // مثال لتحديث حقل الصورة في الدالة

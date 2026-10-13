@@ -3,11 +3,11 @@ const router = express.Router({ mergeParams: true });
 
 import * as authController from "./../controllers/AuthController.js";
 import * as leaseController from "./../controllers/LeaseController.js";
-
-import paymentRouter from "./PaymentRoutes.js";
-router.use("/:leaseId/payments", paymentRouter);
-
 router.use(authController.protect);
+//import paymentRouter from "./PaymentRoutes.js";
+//router.use("/:leaseId/payments", paymentRouter);
+
+
 
 router
   .route("/createLease")
@@ -20,5 +20,9 @@ router
 router
   .route("/leases")
   .get(authController.restrictTo("Manager"), leaseController.getPropertyLeases);
+
+router
+  .route("/leasesPropertyByUser")
+  .get(authController.restrictTo( "Tenant"), leaseController.getLeasesPropertyByUser);
 
 export default router;

@@ -7,16 +7,22 @@ import * as paymentController from "./../controllers/PaymentController.js";
 router.use(authController.protect);
 
 router
-  .route("/createPayment")
+  .route("/:leaseId/createPayment")
   .post(authController.restrictTo("Manager"), paymentController.createPayment);
 
 router
-  .route("/all")
+  .route("/:leaseId/payments/all")
   .get(
-    authController.restrictTo("Manager", "Tenant"),
+    authController.restrictTo("Manager"),
     paymentController.getPayments,
   );
 
+router
+  .route("/:propertyId/payments-property")
+  .get(
+    authController.restrictTo("Manager"),
+    paymentController.getPaymentsByProperty,
+  );
 router
   .route("/:paymentId/pay")
   .patch(
