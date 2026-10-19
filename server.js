@@ -39,7 +39,28 @@ const xss = require('xss-clean');
 
 const cors = require('cors');
 // Middlewares
-app.use(cors());
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://rentiful-client-5.onrender.com',
+      'https://rentiful-server-1.onrender.com'
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // الرابط المحلي من ملف .env
@@ -55,11 +76,6 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log("❌ CONNECTION FAILED");
     console.log("Reason:", err.message);
   });
-
-const doctorRoutes = require('./routes/doctorRoutes');
-app.use('/doctors', doctorRoutes);
-const clinicRoutes = require('./routes/clinicRoutes');
-app.use('/', clinicRoutes);
 
 const userRoutes = require('./routes/userRoutes');
 app.use('/', userRoutes);
