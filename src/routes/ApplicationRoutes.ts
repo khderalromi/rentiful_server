@@ -17,6 +17,14 @@ router
   );
 
 router
+  .route("/all-Applications")
+  .get(
+    authController.restrictTo("Tenant","Manager"),
+    ApplicationController.getApplications,
+  );
+
+
+router
   .route("/tenantApplications")
   .get(
     authController.restrictTo("Tenant"),

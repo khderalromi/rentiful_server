@@ -6,6 +6,7 @@ const Application =
   ApplicationModule;
 
 import * as LeaseModule from "../models/Leases.model.js";
+import Property from "../models/Property.model.js";
 import AppError from "../utils/appError.js";
 
 const Leases =
@@ -75,6 +76,55 @@ export const getPropertyApplications = async (req: any, res: any) => {
   }
 };
 
+
+export const getApplications = async (req: any, res: any) => {
+  try {
+    const userType = req.user.role;
+    let applications;
+    // مثال لتحديث حقل الصورة في الدالة
+    if(userType === 'Manager') {
+      
+    const managerProperties = await Property.find({ manager: req.user._id });
+    const propertyIds = managerProperties.map((prop) => prop._id);
+    applications=  await Application.find({
+                    property: { $in: propertyIds },
+                  }).populate({
+                    path:"property",
+                    populate :{
+                      path:"locationId"
+                    }
+                  }).populate({
+                    path: "tenant",
+                    select: "name email phoneNumber  _id ",
+                  })
+    } else {
+      applications = await Application.find(
+                    { tenant: req.user._id },
+                  ).populate({
+                    path:"property",
+                    populate :{
+                      path:"locationId"
+                    }
+                  }).populate({
+                    path: "tenant",
+                    select: "name email phoneNumber  _id ",
+                  })
+    }
+    if (!applications ||  applications.length === 0) {
+      return res.status(404).json({ message: "الطلب غير موجود" });
+    }
+    res.status(200).json({
+      status: "success",
+      results: applications.length,
+      data: { applications },
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
 export const changeStatus = async (req: any, res: any , next:any) => {
   try {
  const application = await Application.findById(req.params.applicationId);
@@ -116,6 +166,8 @@ export const changeStatus = async (req: any, res: any , next:any) => {
   }
 
 }
+
+
 
 // 3. إلغاء الحجز (تغيير الحالة وليس الحذف)
 export const cancelApplication = async (req:any, res:any) => {
