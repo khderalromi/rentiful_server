@@ -44,8 +44,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
-      'https://rentiful-client-5.onrender.com',
-      'https://rentiful-server-6.onrender.com'
+      'https://rentiful-client-5.onrender.com'
     ];
     
     if (!origin || allowedOrigins.includes(origin)) {
