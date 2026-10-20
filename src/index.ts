@@ -15,10 +15,17 @@ app.use(morgan("common"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}));
 /* 1. إعداد CORS بالسماح لمنفذ الفرونت إند 3000 */
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://rentiful-client-5.onrender.com",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 /*CONNECT TO DB*/
