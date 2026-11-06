@@ -60,22 +60,96 @@ app.use('/leases', leasesRoutes);
 
 
 import paymentsRoutes from './routes/PaymentRoutes.js';
+import AppError from "./utils/appError.js";
 app.use('/payments', paymentsRoutes);
 
+/* ERROR HANDLING */
 
-/*SERVER*/
-const port =process.env.PORT || 3002;
-app.use((err: { statusCode: number; status: string; message: any; stack: any; },
-   req: any, res: any, next: any) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
-
-  res.status(err.statusCode).json({
-    status: err.status,
-    message: err.message,
-    stack: err.stack 
-  });
+// 1. Handle routes that do not exist
+app.use((req, res, next) => {
+  next(
+    new AppError(
+      `Route ${req.originalUrl} not found on this server`,
+      404
+    )
+  );
 });
-app.listen(port, ()=>{
-    console.log(`SERVER RUNNING ON PORT ${port}`)
-})
+
+// 2. Global error handler
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    err.statusCode = err.statusCode || 500;
+    err.status = err.status || "error";
+
+    // Handle invalid JSON sent by the client
+    if (err.type === "entity.parse.failed") {
+      err.statusCode = 400;
+      err.status = "fail";
+      err.message = "Invalid JSON format in request body";
+    }
+
+    // Handle invalid or expired JWT
+    if (err.name === "JsonWebTokenError") {
+      err.statusCode = 401;
+      err.status = "fail";
+      err.message = "Invalid authentication token. Please log in again.";
+    }
+
+    if (err.name === "TokenExpiredError") {
+      err.statusCode = 401;
+      err.status = "fail";
+      err.message ="Your session has expired. Please log in again.";
+    }
+
+    // Handle Mongoose validation errors
+    if (err.name === "ValidationError") {
+      err.statusCode = 400;
+      err.status = "fail";
+      err.message = "Invalid input data";
+    }
+
+    // Handle duplicate MongoDB fields, such as duplicate email
+    if (err.code === 11000) {
+      err.statusCode = 400;
+      err.status = "fail";
+      err.message = "This information is already registered";
+    }
+
+    // Handle invalid MongoDB ObjectId
+    if (err.name === "CastError") {
+      err.statusCode = 400;
+      err.status = "fail";
+      err.message = "Invalid resource ID";
+    }
+
+    const statusCode =
+      Number.isInteger(err.statusCode) &&
+      err.statusCode >= 400 &&
+      err.statusCode <= 599
+        ? err.statusCode
+        : 500;
+
+    const isProduction = process.env.NODE_ENV === "production";
+
+    res.status(statusCode).json({
+      status: statusCode < 500 ? "fail" : "error",
+      message:
+        statusCode >= 500 && isProduction
+    ? "An internal server error occurred. Please try again later."
+    : err.message || "An unexpected error occurred",
+    ...(isProduction ? {} : { stack: err.stack }),
+    });
+  }
+);
+
+/* SERVER */
+const port = process.env.PORT || 3002;
+
+app.listen(port, () => {
+  console.log(`SERVER RUNNING ON PORT ${port}`);
+});

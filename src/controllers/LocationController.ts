@@ -1,29 +1,23 @@
 import * as LocationModel from '../models/Location.model.js';
+import AppError from '../utils/appError.js';
 
 const Location = (LocationModel as any).default ?? (LocationModel as any).Review ?? LocationModel;
 
 
 export const createLocation = async (req:any, res:any) => {
-    try {
-        const newLocation = await Location.create(req.body);
-        res.status(201).json(newLocation);
-    } catch (err:any) {
-        res.status(400).json({ message: err.message });
-    }
+    
+    const newLocation = await Location.create(req.body);
+    res.status(201).json(newLocation);
 };
 
 
-export const updateLocation = async (req:any, res:any) => {
-    try {
+export const updateLocation = async (req:any, res:any, next: any) => {
         const updatedLocation= await Location.findByIdAndUpdate(req.params.locationId, req.body,
             { new: true, runValidators: true }
-        ); // سنأخذ البيانات من الطلب القادم
+        );
         if (!updatedLocation) {
-            res.status(404).json({ message: "not found" })
+            return next(new AppError("location not found", 404));
         }
 
         res.status(200).json(updatedLocation);
-    } catch (err:any) {
-        res.status(400).json({ message: err.message });
-    }
 };

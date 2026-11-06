@@ -10,9 +10,6 @@ const Lease =
   (LeaseModule as any).default ?? (LeaseModule as any).Lease ?? LeaseModule;
 
 export const createPayment = async (req: any, res: any, next:any) => {
-  try {
-    console.log("start")
-    // الآن آمن
     console.log("✅ leaseId:", req.params.leaseId);
     console.log("✅ req.body:", req.body);
     //if (!req.body.leaseId) req.body.leaseId = req.params.leaseId;
@@ -28,21 +25,19 @@ export const createPayment = async (req: any, res: any, next:any) => {
       });
       console.log("lease" + lease)
     if (!lease) {
-      return res.status(404).json({ message: "العقد غير موجود" });
+      return next (new AppError("Lease not found.", 404))
     }
     if (lease && lease.endDate >= new Date()) {
       const newPayment = await Payment.create({...req.body, lease:req.params.leaseId})
       console.log("new payment" + newPayment)
       return res.status(201).json(newPayment);
     }
-    return next(new AppError("this lease date is end",400))
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+    return next(new AppError("Lease has expired.",409))
+ 
 };
 
-export const getPayments = async (req: any, res: any) => {
-  try {
+export const getPayments = async (req: any, res: any, next: any) => {
+  
     //if (!req.body.leaseId) req.body.leaseId = req.params.leaseId;
     const payments = await Payment.find({ lease: req.params.leaseId }).populate(
       {
@@ -52,33 +47,24 @@ export const getPayments = async (req: any, res: any) => {
     );
 
     if (!payments) {
-      return res.status(404).json({ message: "لا توجد مدفوعات لهذا العقد" });
+      return next(new AppError("No payments for this lease",400))
+;
     }
     res.status(200).json(payments);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+  
 };
 export const getPaymentsByProperty = async (req: any, res: any) => {
-    try {
         const propertyId  = req.params.propertyId;
 
-        // 1. جلب كافة الـ IDs للعقود التابعة لهذا العقار
         const propertyLeases = await Lease.find({ property: propertyId }).select('_id');
         const leaseIds = propertyLeases.map((lease: any) => lease._id);
-   console.log(propertyLeases)
-      console.log(leaseIds)
-
-        // 2. جلب جميع الدفعات التي تنتمي لأي عقد من هذه العقود
         const payments = await Payment.find({ lease: { $in: leaseIds } });
+        res.status(200).json({ data: payments });
 
-        res.json({ data: payments });
-    } catch (error) {
-        res.status(500).json({ message: "Error fetching payments" });
-    }
+    
 };
-export const changePaymentStatus = async (req: any, res: any) => {
-  try {
+
+export const changePaymentStatus = async (req: any, res: any, next:any) => {
     if (!req.body.paymentId) req.body.paymentId = req.params.paymentId;
     const payments = await Payment.findByIdAndUpdate(
       { _id: req.params.paymentId },
@@ -90,10 +76,8 @@ export const changePaymentStatus = async (req: any, res: any) => {
     });
 
     if (!payments) {
-      return res.status(404).json({ message: "لا توجد مدفوعات لهذا العقد" });
+      return next(new AppError("Payment not found",404))
     }
     res.status(200).json(payments);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+ 
 };

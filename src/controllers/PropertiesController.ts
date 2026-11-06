@@ -18,35 +18,29 @@ const Location =
 
 import multer from "multer";
 import sharp from "sharp";
+import AppError from "../utils/appError.js";
 
-// 1. تحديد التخزين المؤقت في الذاكرة (Memory Storage)
 const multerStorage = multer.memoryStorage();
 
-// 2. فلتر الأمان: التأكد من أن الملف المرفوع هو صورة فقط وليس ملف خبيث (exe, pdf...)
 const multerFilter = (req: any, file: any, cb: any) => {
   if (file.mimetype.startsWith("image")) {
-    cb(null, true); // الملف سليم، مرره
+    cb(null, true); 
   } else {
-    cb(new Error("الملف المرفوع ليس صورة! يرجى رفع صور فقط."), false);
+    cb(new Error("Invalid file type. Please upload images only."), false);
   }
 };
 
-// 3. تجهيز الميدلوير
 const upload = multer({
   storage: multerStorage,
   fileFilter: multerFilter,
 });
 
-// متاح للاستخدام في ملف المسارات (حقل واحد باسم photo)
 export const uploadPropertyrPhoto = upload.array("photos", 10);;
 
 export const resizePropertyPhoto = async (req: any, res: any, next: any) => {
-  try {
-    // إذا لم يقم المستخدم برفع صورة جديدة، ننتقل للدالة التالية فوراً
     if (!req.files || req.files.length === 0) return next();
     req.body.photoUrls = [];
 
-    // بناء اسم فريد للصورة لعدم تكرار الأسماء (مثال: doctor-6a0080-168482.jpeg)
    for (const file of req.files) {
       const filename = `property-${req.user ? req.user.id : "admin"}-${Date.now()}-${Math.round(Math.random() * 1000)}.jpeg`;
 
@@ -57,35 +51,26 @@ export const resizePropertyPhoto = async (req: any, res: any, next: any) => {
         .toFile(`public/img/property/${filename}`);
     next();
    }
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+
 };
 
-export const deleteProperty = async (req: any, res: any) => {
-  try {
+export const deleteProperty = async (req: any, res: any, next: any) => {
     const deletedProperty = await Property.findByIdAndDelete(req.params.id);
     if (!deletedProperty) {
-      // 404 تعني أن العيادة غير موجودة أصلاً لنحذفها
-      return res.status(404).json({ message: "العقار غير موجود" });
+      return next(new AppError("property not found", 404));;
     }
 
-    // 200 تعني تمت العملية بنجاح
-    res.status(200).json({ message: "تم حذف العقار بنجاح", deletedProperty });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
+    res.status(200).json({ message: "property deleted ..", deletedProperty });
 };
 
-export const createProperty = async (req: any, res: any) => {
-  try {
+export const createProperty = async (req: any, res: any, next: any) => {
     const parseField = (field: any) => {
       if (typeof field === "string") {
         try {
           console.log(field)
-          return JSON.parse(field); // محاولة فكها إذا كانت JSON صحيح
+          return JSON.parse(field); 
         } catch (e) {
-          return [field]; // إذا كانت نصاً عادياً، ضعها داخل مصفوفة تلقائياً لتجنب الخطأ
+          return [field]; 
         }
       }
       return field;
@@ -93,7 +78,6 @@ export const createProperty = async (req: any, res: any) => {
     req.body.coordinates = parseField(req.body.coordinates);
     //req.body.amenities = parseField(req.body.amenities);
     //req.body.highLights = parseField(req.body.highLights);
-    // 2. إذا لم يكن موجوداً، نقوم بإنشائه تلقائياً في الخلفية
     console.log(req.body.coordinates)
     const createdLocation: any = await Location.create({
       address: req.body.address,
@@ -113,13 +97,10 @@ export const createProperty = async (req: any, res: any) => {
     });
 
     res.status(201).json(newProperty);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+  
 };
 
-export const updateProperty = async (req: any, res: any) => {
-  try {
+export const updateProperty = async (req: any, res: any, next: any) => {
     let updatedProperty: any = await Property.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -127,7 +108,7 @@ export const updateProperty = async (req: any, res: any) => {
     );
 
     if (!updatedProperty) {
-      res.status(404).json({ message: "not found" });
+      return next (new AppError("Property not found.", 404));
     }
 
     if (
@@ -159,42 +140,29 @@ export const updateProperty = async (req: any, res: any) => {
         select: "reviews",
       });
     return res.status(200).json(finalProperty);
-    // سنأخذ البيانات من الطلب القادم
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
 };
 
 export const findPropertyfilter = async (req: any, res: any) => {
-  try {
-    // 1. عزل شروط البحث عن أوامر التحكم (sort, limit...)
     let queryObj = { ...req.query };
     const excludeFields = ["sort", "page", "limit", "fields", "locationId", "latlng", "distance", "unit", "city", "location"];
     excludeFields.forEach((el) => delete queryObj[el]);
 
-    // 2. معالجة العمليات الحسابية (gt, gte...) وتحويلها لصيغة MongoDB
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
     let finalQuery = JSON.parse(queryStr);
 
-    // 3. معالجة الأقواس المربعة (مهمة جداً لضمان نظافة البحث)
-    //العمليات التي تحوي فقط على اقواس مثا price [gte]=200
     Object.keys(finalQuery).forEach((key) => {
       if (key.includes("[") && key.includes("]")) {
-        //price[gte]  تصبح price   gte]
         const [field, operatorRaw] = key.split("[");
-        //ازالة قوس النهاية من gte]
         const operator = `${(operatorRaw ?? "").replace("]", "")}`;
         if (!field) return;
 
-        //مهم لانشاء كائن فارغ للحقل المقصود
         if (!finalQuery[field]) finalQuery[field] = {};
 
         finalQuery[field][operator] = Number(finalQuery[key]);
         delete finalQuery[key];
       }
     });
-    // أولوية 1: البحث الجغرافي الدقيق (إذا أرسل الفرونت إند إحداثيات من Mapbox)
 let locationIds : string[] = [];
 if (req.query.latlng && req.query.distance) {
   const [lat, lng] = req.query.latlng.split(",");
@@ -207,12 +175,11 @@ if (req.query.latlng && req.query.distance) {
   locationIds = nearbyLocations.map((loc: any) => loc._id.toString());
   finalQuery.locationId = { $in: locationIds };
 } 
-// أولوية 2: البحث النصي العادي (في حال لم تُستخدم الخريطة وأرسل المستخدم اسم مدينة فقط)
 else if (req.query.city || req.query.location) {
   const cityName = req.query.city || req.query.location;
   if (cityName !== "any" && cityName.trim() !== "") {
     const matchingLocations = await Location.find({
-      city: { $regex: new RegExp(cityName, "i") } // بحث غير حساس لحالة الأحرف
+      city: { $regex: new RegExp(cityName, "i") }
     });
     
     locationIds = matchingLocations.map((loc: any) => loc._id.toString());
@@ -220,19 +187,15 @@ else if (req.query.city || req.query.location) {
   }
 }
 
-// تنظيف الكائن النهائي من أي بقايا للبحث النصي لكي لا تخرب استعلام العقارات
 delete finalQuery.city;
 delete finalQuery.location;
-    // 4. بناء الاستعلام (هنا تبدأ عملية الـ Chaining)
     let propertyQuery: any = Property.find(finalQuery);
 
-    // 5. الترتيب (Sorting)
     if (req.query.sort) {
       const sortBy = req.query.sort.split(",").join(" ");
       propertyQuery = propertyQuery.sort(sortBy);
     }
 
-    // 6. تحديد الحقول (Field Limiting)
     if (req.query.fields) {
       const fields = req.query.fields.split(",").join(" ");
       propertyQuery = propertyQuery.select(fields);
@@ -240,15 +203,12 @@ delete finalQuery.location;
       propertyQuery = propertyQuery.select("-__v");
     }
 
-    // 7. التقسيم والـ Limit (هذا هو السطر الذي يفشل عندك حالياً)
-    // تأكدنا هنا من تحويل النص إلى رقم (مثلاً '5' تصبح 5)
     const page = req.query.page * 1 || 1;
     const limit = req.query.limit * 1 || 100;
     const skip = (page - 1) * limit;
 
     propertyQuery = propertyQuery.skip(skip).limit(limit);
 
-    // 8. تنفيذ الاستعلام (يجب أن يكون الـ await في آخر خطوة)
     const properties = await propertyQuery
       .populate({
         path: "manager",
@@ -263,20 +223,17 @@ delete finalQuery.location;
         select: "reviews",
       });
 
-    // إرسال الاستجابة
     res.status(200).json({
       status: "success",
-      results: properties.length, // يجب أن يطبع 5 الآن
+      results: properties.length, 
       data: properties,
     });
-  } catch (err: any) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
+  
 };
 
 
 //get property by id
-export const getProperty = async (req: any, res: any) => {
+export const getProperty = async (req: any, res: any, next: any) => {
 
   const property = await Property.findById(req.params.id)
     .populate({
@@ -291,7 +248,9 @@ export const getProperty = async (req: any, res: any) => {
       path: "reviews",
       select: "reviews",
     });
-
+    if(!property) {
+      return next(new AppError("property not found", 404));
+    }
   console.log(property);
   res.status(200).json({ status: "success", data: property });
 };
@@ -320,8 +279,6 @@ export const getManagerProperties = async (req: any, res: any) => {
 
 //All properties
 export const getAllProperties = async (req: any, res: any) => {
-  try {
-    // مثال لتحديث حقل الصورة في الدالة
     if (req.file) req.body.photo = req.file.filename;
     const properties = await Property.find()
       .populate({
@@ -342,23 +299,18 @@ export const getAllProperties = async (req: any, res: any) => {
       results: properties.length,
       data: { properties },
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
+ 
 };
 
 export const getPropertyReviews = async (req: any, res: any) => {
-  try {
-    // 1. تحديد الفلتر (إذا كان هناك ID في الرابط نستخدمه، وإلا الفلتر فارغ)
     const propId: string = req.params.propertyId || req.params.id;
 
     let filter = {};
     if (propId) filter = { property: propId };
-    // 2. تنفيذ الاستعلام
     console.log(filter)
     const reviews = await Review.find({ property: req.params.propertyId }).populate({
         path:"property",
-        select:"name description pricePerMonth _id  ", // نحن لا نحتاج إلى جميع حقول العقار، فقط بعضها
+        select:"name description pricePerMonth _id  ", 
     })
     
 
@@ -369,30 +321,20 @@ export const getPropertyReviews = async (req: any, res: any) => {
         reviews,
       },
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
+ 
 };
 
-export const getPropertiesWithinRadius = async (req: any, res: any) => {
-  try {
-    // 1. استخراج المتغيرات من الرابط
-    // مثال للرابط: /properties/radius/5/center/33.5138,36.2765/unit/km
+export const getPropertiesWithinRadius = async (req: any, res: any, next: any) => {
     const { distance, latlng, unit } = req.params;
     const [lat, lng] = latlng.split(",");
 
     if (!lat || !lng) {
-      return res.status(400).json({
-        message: "يرجى توفير خط الطول ودائرة العرض بصيغة lat,lng",
-      });
+     return next(new AppError("Please provide latitude and longitude in the format lat,lng", 400))
     }
 
-    // 2. تحويل المسافة إلى راديان (التي يفهمها محرك MongoDB)
-    // قسمة المسافة على نصف قطر الأرض (3963.2 ميل أو 6378.1 كم)
     const radius =
       unit === "mi" ? Number(distance) / 3963.2 : Number(distance) / 6378.1;
 
-    // 3. البحث في جدول الـ Locations عن المواقع التي تقع ضمن هذه الدائرة
     const nearbyLocations = await Location.find({
       location: {
         $geoWithin: {
@@ -401,10 +343,8 @@ export const getPropertiesWithinRadius = async (req: any, res: any) => {
       },
     });
 
-    // 4. استخراج معرّفات المواقع القريبة
     const locationIds = nearbyLocations.map((loc: { _id: any }) => loc._id);
 
-    // 5. البحث في جدول العقارات عن العقارات التي تمتلك هذه المواقع
     const properties = await Property.find({ locationId: { $in: locationIds } })
       .populate("locationId")
       .populate({
@@ -418,14 +358,11 @@ export const getPropertiesWithinRadius = async (req: any, res: any) => {
       .populate({
         path: "reviews",
         select: "reviews",
-      }); // لجلب تفاصيل الموقع داخل كل عقار
+      }); 
 
     res.status(200).json({
       status: "success",
       results: properties.length,
       data: properties,
     });
-  } catch (err: any) {
-    res.status(500).json({ status: "error", message: err.message });
-  }
 };

@@ -15,8 +15,6 @@ const Leases =
   LeaseModule;
 
 export const createApplication = async (req: any, res: any) => {
-  // إذا لم يرسل المستخدم projectId في الـ body، نأخذه من الرابط
-  try {
     if (!req.body.property) req.body.property = req.params.propertyId;
 
     const newApplication = await Application.create({
@@ -25,35 +23,25 @@ export const createApplication = async (req: any, res: any) => {
       property: req.body.property,
     })
     res.status(201).json(newApplication);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
-  // ... بقية الكود
 };
 
 export const getTenantApplications = async (req: any, res: any) => {
-  try {
-    // مثال لتحديث حقل الصورة في الدالة
+
     const applications = await Application.find({ tenant: req.user._id }).populate({
     path: "tenant",
-    select: "name email phoneNumber congitoId _id ", // نحن لا نحتاج إلى جميع حقول الطبيب، فقط اسمه
+    select: "name email phoneNumber congitoId _id ", 
   }).populate({
     path:"property",
-    select:"name description pricePerMonth _id  ", // نحن لا نحتاج إلى جميع حقول العقار، فقط بعضها
+    select:"name description pricePerMonth _id  ",
   });
     res.status(200).json({
       status: "success",
       results: applications.length,
       data: { applications },
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
 };
 
-export const getPropertyApplications = async (req: any, res: any) => {
-  try {
-    // مثال لتحديث حقل الصورة في الدالة
+export const getPropertyApplications = async (req: any, res: any, next: any) => {
     const applications = await Application.find({
       property: req.params.propertyId,
     }).populate({
@@ -64,21 +52,18 @@ export const getPropertyApplications = async (req: any, res: any) => {
       select: "name email phoneNumber congitoId _id ",
     });
     if (!applications) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
+      return next(new AppError("application not found", 404));;
     }
     res.status(200).json({
       status: "success",
       results: applications.length,
       data: { applications },
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
+ 
 };
 
 
-export const getApplications = async (req: any, res: any) => {
-  try {
+export const getApplications = async (req: any, res: any, next: any) => {
     const userType = req.user.role;
     let applications;
     // مثال لتحديث حقل الصورة في الدالة
@@ -110,26 +95,21 @@ export const getApplications = async (req: any, res: any) => {
                     select: "name email phoneNumber  _id ",
                   })
     }
-    if (!applications ||  applications.length === 0) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
-    }
+    if (!applications) {
+        return next(new AppError("applications not found", 404));    }
     res.status(200).json({
       status: "success",
       results: applications.length,
       data: { applications },
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
 };
 
 
 
 export const changeStatus = async (req: any, res: any , next:any) => {
-  try {
  const application = await Application.findById(req.params.applicationId);
     if (!application) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
+      return next(new AppError("applications not found", 404));;
     }
     if (req.body.status === "approved") {
       const existingActiveLease = await Leases.findOne({
@@ -138,7 +118,7 @@ export const changeStatus = async (req: any, res: any , next:any) => {
       });
       if (existingActiveLease) {
         return next(
-          new AppError("this property have an active lease", 400)
+          new AppError("this property have an active lease", 404)
         );
       }
     const newApplication = await Application.findByIdAndUpdate(
@@ -154,44 +134,32 @@ export const changeStatus = async (req: any, res: any , next:any) => {
     });
 
     if (!newApplication) {
-      return res.status(404).json({ message: "الطلب غير موجود" });
+      return next(new AppError("application not found", 400));
     }
     res.status(200).json({
       status: "success",
       data: { newApplication },
     });
   }
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
-
 }
 
 
 
-// 3. إلغاء الحجز (تغيير الحالة وليس الحذف)
-export const cancelApplication = async (req:any, res:any) => {
-    try {
-        // نبحث عن الحجز ونتأكد أنه يخص المريض الحالي لضمان الأمان
+export const cancelApplication = async (req:any, res:any, next: any) => {
         const application = await Application.findOne({
             _id: req.params.id,
             user: req.user.id
         });
 
         if (!application) {
-            return res.status(404).json({ message: 'الحجز غير موجود أو لا تملك صلاحية إلغائه.' });
-        }
+            return next(new AppError("application not found or you can't cancel it", 404));        }
 
-        // تغيير الحالة إلى cancelled
         application.status = 'cancelled';
         await application.save();
 
         res.status(200).json({
             status: 'success',
-            message: 'تم إلغاء الطلب بنجاح.',
+            message: 'application cancelled successfully',
             data: { application }
         });
-    } catch (err:any) {
-        res.status(400).json({ message: err.message });
-    }
 };

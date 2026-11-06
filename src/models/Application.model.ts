@@ -8,7 +8,7 @@ const applicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "cancelled", "completed"],
+      enum: ["pending", "approved", "denied", "completed"],
       default: "pending",
     },
     property: {
@@ -44,7 +44,7 @@ applicationSchema.pre("save", async function (this: any) {
   });
 
   if (existingApplication) {
-    throw new Error("هذا الطلب محجوز مسبقاً، يرجى اختيار عقار آخر.");
+    throw new Error("this application is booked, please choose another property");
   }
 });
 

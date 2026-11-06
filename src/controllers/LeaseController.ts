@@ -8,53 +8,50 @@ const Application =
 
 export const createLease = async (req: any, res: any, next: any) => {
   // إذا لم يرسل المستخدم projectId في الـ body، نأخذه من الرابط
-  try {
-    const application = await Application.findById(req.params.applicationId);
-    const statusCheck = application.status;
-    console.log(statusCheck);
-    if (statusCheck !== "approved") {
-      return next(
-        new AppError("لا يمكن إنشاء عقد إلا بعد الموافقة على الطلب", 400),
-      );
-    }
-    if (application.lease !== null) {
-      return next(new AppError("تم إنشاء عقد مسبقًا لهذا الطلب", 400));
-    }
-    if (!req.body.rent) req.body.rent = application.pricePerMonth;
-    if (!req.body.deposit) req.body.deposit = application.securityDeposit;
-    if (!req.body.property) req.body.property = application.property;
-    if (!req.body.tenant) req.body.tenant = application.tenant;
-    const propertyId = req.body.property || application.property;
-    console.log(propertyId)
-    const existingActiveLease = await Lease.findOne({
-      property: propertyId,
-      endDate: { $gte: new Date() },
-    });
-console.log(existingActiveLease)
-    if (existingActiveLease) {
-      return next(
-        new AppError("this property have an active lease", 400)
-      );
-    }
-    const newLease = await Lease.create(req.body);
-    application.lease = newLease._id;
-    await application.save();
-    res.status(201).json(newLease);
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
+
+  const application = await Application.findById(req.params.applicationId);
+  if (!application) {
+    return next(new AppError("Application not found", 404));
   }
-  // ... بقية الكود
+
+ const statusCheck = application.status;
+
+  if (statusCheck !== "approved") {
+    return next(
+      new AppError("A lease cannot be created before the application is approved.", 400),
+    );
+  }
+  if (application.lease != null) {
+    return next(new AppError("A lease has already been created for this application.", 400));
+  }
+  if (!req.body.rent) req.body.rent = application.pricePerMonth;
+  if (!req.body.deposit) req.body.deposit = application.securityDeposit;
+  if (!req.body.property) req.body.property = application.property;
+  if (!req.body.tenant) req.body.tenant = application.tenant;
+  const propertyId = req.body.property || application.property;
+  console.log(propertyId);
+  const existingActiveLease = await Lease.findOne({
+    property: propertyId,
+    endDate: { $gte: new Date() },
+  });
+  console.log(existingActiveLease);
+  if (existingActiveLease) {
+    return next(new AppError("this property have an active lease", 400));
+  }
+  const newLease = await Lease.create(req.body);
+  application.lease = newLease._id;
+  await application.save();
+  res.status(201).json(newLease);
 };
 
 export const getTenantLeases = async (req: any, res: any) => {
-  try {
     // مثال لتحديث حقل الصورة في الدالة
     const leases = await Lease.find({ tenant: req.user._id })
       .populate({
         path: "property",
         populate: {
           path: "locationId",
-        }
+        },
         //select: "name description pricePerMonth _id  ",
       })
       .populate({
@@ -67,13 +64,9 @@ export const getTenantLeases = async (req: any, res: any) => {
       results: leases.length,
       data: { leases },
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
 };
 
-export const getPropertyLeases = async (req: any, res: any) => {
-  try {
+export const getPropertyLeases = async (req: any, res: any, next: any) => {
     // مثال لتحديث حقل الصورة في الدالة
     const leases = await Lease.find({
       property: req.params.propertyId,
@@ -82,7 +75,7 @@ export const getPropertyLeases = async (req: any, res: any) => {
         path: "property",
         populate: {
           path: "locationId",
-        }
+        },
         //select: "name description pricePerMonth _id  ",
       })
       .populate({
@@ -90,48 +83,36 @@ export const getPropertyLeases = async (req: any, res: any) => {
         select: "name email phoneNumber congitoId _id ",
       });
     if (!leases) {
-      return res.status(404).json({ message: "العقد غير موجود" });
+      return next(new AppError("lease not found", 400));
     }
     res.status(200).json({
       status: "success",
       results: leases.length,
-      data: leases ,
+      data: leases,
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
 };
 
-
-
-export const getLeasesPropertyByUser = async (req: any, res: any) => {
-  try {
-    // مثال لتحديث حقل الصورة في الدالة
+export const getLeasesPropertyByUser = async (req: any, res: any, next: any) => {
     const leases = await Lease.find({
       property: req.params.propertyId,
-      twnant:req.user._id
-
+      tenant: req.user._id,
     })
       .populate({
         path: "property",
         populate: {
           path: "locationId",
-        }
-        //select: "name description pricePerMonth _id  ",
+        },
       })
       .populate({
         path: "tenant",
         select: "name email phoneNumber congitoId _id ",
       });
     if (!leases) {
-      return res.status(404).json({ message: "العقد غير موجود" });
+     return next(new AppError("lease not found", 400));
     }
     res.status(200).json({
       status: "success",
       results: leases.length,
-      data: leases ,
+      data: leases,
     });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
-  }
 };
