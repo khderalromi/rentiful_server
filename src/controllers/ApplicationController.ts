@@ -20,7 +20,7 @@ export const createApplication = async (req: any, res: any) => {
     const newApplication = await Application.create({
       tenant: req.user._id,
       message: req.body.message,
-      property: req.body.property,
+      property: req.body.propertyId,
     })
     res.status(201).json(newApplication);
 };
