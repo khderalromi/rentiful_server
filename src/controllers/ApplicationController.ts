@@ -121,6 +121,7 @@ export const changeStatus = async (req: any, res: any , next:any) => {
           new AppError("this property have an active lease", 404)
         );
       }
+    }
     const newApplication = await Application.findByIdAndUpdate(
       { _id: req.params.applicationId },
       { status: req.body.status },
@@ -140,7 +141,7 @@ export const changeStatus = async (req: any, res: any , next:any) => {
       status: "success",
       data: { newApplication },
     });
-  }
+  
 }
 
 
