@@ -147,17 +147,16 @@ export const changeStatus = async (req: any, res: any , next:any) => {
 
 
 export const cancelApplication = async (req:any, res:any, next: any) => {
-        const application = await Application.findOne({
-            _id: req.params.applicationId,
-            user: req.user._id
-        });
+        const application = await Application.findByIdAndUpdate(
+            { _id: req.params.applicationId },
+            { status: req.body.status },
+            {user: req.user._id},
+            { new: true }
+            
+        );
 
         if (!application) {
             return next(new AppError("application not found or you can't cancel it", 404));        }
-
-        application.status = 'cancelled';
-        await application.save();
-
         res.status(200).json({
             status: 'success',
             message: 'application cancelled successfully',
