@@ -179,7 +179,10 @@ else if (req.query.city || req.query.location) {
   const cityName = req.query.city || req.query.location;
   if (cityName !== "any" && cityName.trim() !== "") {
     const matchingLocations = await Location.find({
-      city: { $regex: new RegExp(cityName, "i") }
+      $or: [
+      {city: { $regex: new RegExp(cityName, "i") } },
+     {country: { $regex: new RegExp(cityName, "i") } } 
+    ]
     });
     
     locationIds = matchingLocations.map((loc: any) => loc._id.toString());
