@@ -149,7 +149,6 @@ export const changeStatus = async (req: any, res: any , next:any) => {
 export const cancelApplication = async (req:any, res:any, next: any) => {
         const application = await Application.findByIdAndDelete(
             { _id: req.params.applicationId },
-            { status: req.body.status },
             {user: req.user._id},
             { new: true }
             
