@@ -55,7 +55,7 @@ export const resizePropertyPhoto = async (req: any, res: any, next: any) => {
 };
 
 export const deleteProperty = async (req: any, res: any, next: any) => {
-    const deletedProperty = await Property.findByIdAndDelete(req.params.id);
+    const deletedProperty = await Property.findByIdAndDelete(req.params.propertyId);
     if (!deletedProperty) {
       return next(new AppError("property not found", 404));;
     }
