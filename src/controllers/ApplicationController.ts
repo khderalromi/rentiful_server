@@ -147,7 +147,7 @@ export const changeStatus = async (req: any, res: any , next:any) => {
 
 
 export const cancelApplication = async (req:any, res:any, next: any) => {
-        const application = await Application.findByIdAndUpdate(
+        const application = await Application.findByIdAndDelete(
             { _id: req.params.applicationId },
             { status: req.body.status },
             {user: req.user._id},
@@ -156,7 +156,7 @@ export const cancelApplication = async (req:any, res:any, next: any) => {
         );
 
         if (!application) {
-            return next(new AppError("application not found or you can't cancel it", 404));        }
+            return next(new AppError("application not found or you can't delete it", 404));        }
         res.status(200).json({
             status: 'success',
             message: 'application cancelled successfully',
