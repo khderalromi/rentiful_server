@@ -39,7 +39,7 @@ router
   );
 
 router
-  .route("/delete/:id")
+  .route("/delete/:propertyId")
   .delete(
     authController.restrictTo("Manager"),
     propertyController.deleteProperty,
