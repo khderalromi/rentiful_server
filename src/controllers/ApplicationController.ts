@@ -149,7 +149,7 @@ export const changeStatus = async (req: any, res: any , next:any) => {
 export const cancelApplication = async (req:any, res:any, next: any) => {
         const application = await Application.findOne({
             _id: req.params.applicationId,
-            user: req.user.id
+            user: req.user._id
         });
 
         if (!application) {
