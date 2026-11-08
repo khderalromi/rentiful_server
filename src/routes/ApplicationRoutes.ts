@@ -48,7 +48,7 @@ router
 router
   .route("/:applicationId/cancel")
   .patch(
-    authController.restrictTo("Manager"),
+    authController.restrictTo("Tenant"),
     ApplicationController.cancelApplication,
   );
 
