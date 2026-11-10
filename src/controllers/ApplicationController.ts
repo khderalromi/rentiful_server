@@ -111,6 +111,8 @@ export const getApplications = async (req: any, res: any, next: any) => {
 
 export const changeStatus = async (req: any, res: any, next: any) => {
   const application = await Application.findById(req.params.applicationId);
+  .populate("property")
+  .populate("tenant");
   if (!application) {
     return next(new AppError("applications not found", 404));
   }
@@ -122,6 +124,48 @@ export const changeStatus = async (req: any, res: any, next: any) => {
     if (existingActiveLease) {
       return next(new AppError("this property have an active lease", 404));
     }
+  }
+  if (req.body.status === "approved") {
+    if (application.lease != null) {
+      return next(
+        new AppError(
+          "A lease has already been created for this application.",
+          400,
+        ),
+      );
+    }
+    console.log("✅ newApplication:", application);
+    if (!req.body.rent) req.body.rent = application.property.pricePerMonth;
+    if (!req.body.deposit) req.body.deposit = application.property.securityDeposit;
+    if (!req.body.property) req.body.property = application.property._id;
+    if (!req.body.tenant) req.body.tenant = application.tenant._id;
+    if (!req.body.startDate) req.body.startDate = new Date();
+    if (!req.body.endDate) {
+      const endDate = new Date(req.body.startDate);
+      endDate.setMonth(endDate.getMonth() + 1);
+      req.body.endDate = endDate;
+    }
+    const propertyId = req.body.property || application.property;
+    console.log(propertyId);
+    const existingActiveLease = await Lease.findOne({
+      property: propertyId,
+      endDate: { $gte: new Date() },
+    });
+
+    console.log(existingActiveLease);
+    if (existingActiveLease) {
+      return next(new AppError("this property have an active lease", 400));
+    }
+    const newLease = await Lease.create(req.body);
+    application.lease = newLease._id;
+    await application.save();
+    return res.status(201).json({
+      status: "success",
+      data: {
+        application: application,
+        lease: newLease,
+      },
+    });
   }
   const newApplication = await Application.findByIdAndUpdate(
     { _id: req.params.applicationId },
@@ -139,42 +183,6 @@ export const changeStatus = async (req: any, res: any, next: any) => {
 
   if (!newApplication) {
     return next(new AppError("application not found", 400));
-  }
-  if (newApplication.status === "approved") {
-    if (newApplication.lease != null) {
-      return next(
-        new AppError(
-          "A lease has already been created for this application.",
-          400,
-        ),
-      );
-    }
-    console.log("✅ newApplication:", newApplication);
-    if (!req.body.rent) req.body.rent = newApplication.property.pricePerMonth;
-    if (!req.body.deposit) req.body.deposit = newApplication.property.securityDeposit;
-    if (!req.body.property) req.body.property = newApplication.property._id;
-    if (!req.body.tenant) req.body.tenant = newApplication.tenant._id;
-    const propertyId = req.body.property || newApplication.property;
-    console.log(propertyId);
-    const existingActiveLease = await Lease.findOne({
-      property: propertyId,
-      endDate: { $gte: new Date() },
-    });
-
-    console.log(existingActiveLease);
-    if (existingActiveLease) {
-      return next(new AppError("this property have an active lease", 400));
-    }
-    const newLease = await Lease.create(req.body);
-    newApplication.lease = newLease._id;
-    await newApplication.save();
-    return res.status(201).json({
-      status: "success",
-      data: {
-        application: newApplication,
-        lease: newLease,
-      },
-    });
   }
   res.status(200).json({
     status: "success",
