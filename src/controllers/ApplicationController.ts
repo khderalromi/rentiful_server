@@ -181,6 +181,7 @@ export const changeStatus = async (req: any, res: any, next: any) => {
     }
     const newLease = await Lease.create(req.body);
     application.lease = newLease._id;
+    application.status = req.body.status;
     await application.save();
     return res.status(201).json({
       status: "success",
