@@ -76,11 +76,17 @@ export const getApplications = async (req: any, res: any, next: any) => {
     applications = await Application.find({
       property: { $in: propertyIds },
     })
-      .populate({
+       .populate({
         path: "property",
-        populate: {
-          path: "locationId",
-        },
+        populate: [
+          {
+            path: "manager",
+            select: "name email phoneNumber",
+          },
+          {
+            path: "locationId",
+          },
+        ],
       })
       .populate({
         path: "tenant",
@@ -90,9 +96,15 @@ export const getApplications = async (req: any, res: any, next: any) => {
     applications = await Application.find({ tenant: req.user._id })
       .populate({
         path: "property",
-        populate: {
-          path: "locationId",
-        },
+        populate: [
+          {
+            path: "manager",
+            select: "name email phoneNumber",
+          },
+          {
+            path: "locationId",
+          },
+        ],
       })
       .populate({
         path: "tenant",
@@ -111,15 +123,15 @@ export const getApplications = async (req: any, res: any, next: any) => {
 
 export const changeStatus = async (req: any, res: any, next: any) => {
   const application = await Application.findById(req.params.applicationId)
-  .populate("property")
-  .populate("tenant")
-  .populate({
-    path: "property",
-    populate: {
-      path: "manager",
-      model: "User",
-    },
-  });
+    .populate("property")
+    .populate("tenant")
+    .populate({
+      path: "property",
+      populate: {
+        path: "manager",
+        select: "name email phoneNumber",
+      },
+    });
   if (!application) {
     return next(new AppError("applications not found", 404));
   }
@@ -143,7 +155,8 @@ export const changeStatus = async (req: any, res: any, next: any) => {
     }
     console.log("✅ newApplication:", application);
     if (!req.body.rent) req.body.rent = application.property.pricePerMonth;
-    if (!req.body.deposit) req.body.deposit = application.property.securityDeposit;
+    if (!req.body.deposit)
+      req.body.deposit = application.property.securityDeposit;
     if (!req.body.property) req.body.property = application.property._id;
     if (!req.body.tenant) req.body.tenant = application.tenant._id;
     if (!req.body.startDate) req.body.startDate = new Date();
