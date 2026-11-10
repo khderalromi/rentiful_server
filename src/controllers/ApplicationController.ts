@@ -130,7 +130,7 @@ export const changeStatus = async (req: any, res: any, next: any) => {
   )
     .populate({
       path: "property",
-      select: "name description pricePerMonth _id  ",
+      select: "name description securityDeposit pricePerMonth _id  ",
     })
     .populate({
       path: "tenant",
@@ -149,6 +149,7 @@ export const changeStatus = async (req: any, res: any, next: any) => {
         ),
       );
     }
+    console.log("✅ newApplication:", newApplication);
     if (!req.body.rent) req.body.rent = newApplication.pricePerMonth;
     if (!req.body.deposit) req.body.deposit = newApplication.securityDeposit;
     if (!req.body.property) req.body.property = newApplication.property;
