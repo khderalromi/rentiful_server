@@ -153,7 +153,7 @@ export const changeStatus = async (req: any, res: any, next: any) => {
     if (!req.body.rent) req.body.rent = newApplication.property.pricePerMonth;
     if (!req.body.deposit) req.body.deposit = newApplication.property.securityDeposit;
     if (!req.body.property) req.body.property = newApplication.property._id;
-    if (!req.body.tenant) req.body.tenant = newApplication.tenant;
+    if (!req.body.tenant) req.body.tenant = newApplication.tenant._id;
     const propertyId = req.body.property || newApplication.property;
     console.log(propertyId);
     const existingActiveLease = await Lease.findOne({
