@@ -112,7 +112,7 @@ export const getApplications = async (req: any, res: any, next: any) => {
       .populate({
         path: "tenant",
         select: "name email phoneNumber  _id ",
-      });
+      }).populate("lease");
   }
   if (!applications) {
     return next(new AppError("applications not found", 404));
