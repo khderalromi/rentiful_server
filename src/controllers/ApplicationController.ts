@@ -91,6 +91,9 @@ export const getApplications = async (req: any, res: any, next: any) => {
       .populate({
         path: "tenant",
         select: "name email phoneNumber  _id ",
+      })
+      .populate({
+        path:"lease"
       });
   } else {
     applications = await Application.find({ tenant: req.user._id })
