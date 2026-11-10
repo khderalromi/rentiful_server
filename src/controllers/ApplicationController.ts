@@ -117,6 +117,7 @@ export const changeStatus = async (req: any, res: any, next: any) => {
     path: "property",
     populate: {
       path: "manager",
+      model: "User",
     },
   });
   if (!application) {
