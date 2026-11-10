@@ -150,8 +150,8 @@ export const changeStatus = async (req: any, res: any, next: any) => {
       );
     }
     console.log("✅ newApplication:", newApplication);
-    if (!req.body.rent) req.body.rent = newApplication.pricePerMonth;
-    if (!req.body.deposit) req.body.deposit = newApplication.securityDeposit;
+    if (!req.body.rent) req.body.rent = newApplication.property.pricePerMonth;
+    if (!req.body.deposit) req.body.deposit = newApplication.property.securityDeposit;
     if (!req.body.property) req.body.property = newApplication.property._id;
     if (!req.body.tenant) req.body.tenant = newApplication.tenant;
     const propertyId = req.body.property || newApplication.property;
