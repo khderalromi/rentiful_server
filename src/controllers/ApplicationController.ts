@@ -112,7 +112,13 @@ export const getApplications = async (req: any, res: any, next: any) => {
 export const changeStatus = async (req: any, res: any, next: any) => {
   const application = await Application.findById(req.params.applicationId)
   .populate("property")
-  .populate("tenant");
+  .populate("tenant")
+  .populate({
+    path: "property",
+    populate: {
+      path: "manager",
+    },
+  });
   if (!application) {
     return next(new AppError("applications not found", 404));
   }
